@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coach Board</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page-teacher">
+    <header class="topbar">
+      <div class="brand-wrap">
+        <span class="brand-mark">CF</span>
+        <span class="brand-name">Coach board</span>
+      </div>
+      <nav class="nav-links">
+        <a href="index.html">Home</a>
+        <a href="student.html">Practitioner</a>
+      </nav>
+    </header>
+
+    <main class="teacher-layout">
+      <section class="panel exercise-panel">
+        <div class="panel-header">
+          <div>
+            <p class="eyebrow">Routine of the day</p>
+            <h2>Choose the workout</h2>
+          </div>
+        </div>
+        <div id="exercise-list" class="exercise-list">
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Air squats" data-duration="30" data-focus="Lower body power" checked />
+            <span class="exercise-copy"><strong>Air squats</strong><small>30s • Lower body power</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Burpees" data-duration="20" data-focus="Full-body conditioning" checked />
+            <span class="exercise-copy"><strong>Burpees</strong><small>20s • Full-body conditioning</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Box jumps" data-duration="25" data-focus="Explosive legs" checked />
+            <span class="exercise-copy"><strong>Box jumps</strong><small>25s • Explosive legs</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Kettlebell swings" data-duration="35" data-focus="Hip drive and endurance" checked />
+            <span class="exercise-copy"><strong>Kettlebell swings</strong><small>35s • Hip drive and endurance</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Push-ups" data-duration="25" data-focus="Upper body strength" checked />
+            <span class="exercise-copy"><strong>Push-ups</strong><small>25s • Upper body strength</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Mountain climbers" data-duration="20" data-focus="Core and cardio" checked />
+            <span class="exercise-copy"><strong>Mountain climbers</strong><small>20s • Core and cardio</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Wall balls" data-duration="30" data-focus="Power and coordination" checked />
+            <span class="exercise-copy"><strong>Wall balls</strong><small>30s • Power and coordination</small></span>
+          </label>
+          <label class="exercise-card">
+            <input type="checkbox" name="exercise" value="Plank hold" data-duration="40" data-focus="Core stability" checked />
+            <span class="exercise-copy"><strong>Plank hold</strong><small>40s • Core stability</small></span>
+          </label>
+        </div>
+      </section>
+
+      <aside class="panel control-panel">
+        <p class="eyebrow">Session controls</p>
+        <h2>Workout format</h2>
+
+        <div class="mode-switch workout-format-switch">
+          <label class="mode-option">
+            <input type="radio" name="timer-mode" value="for-time" />
+            <span>For Time</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="timer-mode" value="amrap" />
+            <span>AMRAP</span>
+          </label>
+          <label class="mode-option">
+            <input type="radio" name="timer-mode" value="emom" checked />
+            <span>EMOM</span>
+          </label>
+        </div>
+
+        <p id="format-description" class="format-description">Exercises run in order; choose whether to advance automatically or manually.</p>
+
+        <label id="time-cap-field" class="time-cap-field hidden" for="time-cap-minutes">
+          <span>Time cap (minutes)</span>
+          <input id="time-cap-minutes" type="number" min="1" max="120" step="1" value="20" />
+        </label>
+
+        <fieldset id="emom-controls" class="emom-controls">
+          <legend>Exercise progression</legend>
+          <div class="mode-switch">
+            <label class="mode-option">
+              <input type="radio" name="mode" value="automatic" checked />
+              <span>Automatic</span>
+            </label>
+            <label class="mode-option">
+              <input type="radio" name="mode" value="manual" />
+              <span>Manual</span>
+            </label>
+          </div>
+        </fieldset>
+
+        <div class="action-group">
+          <button id="start-workout" class="btn btn-primary">Start workout</button>
+          <button id="advance-workout" class="btn btn-secondary hidden">Next exercise</button>
+          <button id="finish-workout" class="btn btn-secondary hidden">Finish workout</button>
+          <button id="reset-workout" class="btn btn-muted">Reset</button>
+        </div>
+
+        <div class="status-box">
+          <p class="status-label">Status</p>
+          <h3 id="status-label">Waiting to start</h3>
+          <p id="current-exercise-name">No exercise selected</p>
+          <div id="countdown-display" class="countdown-display">00:00</div>
+          <p id="sync-message" class="sync-message" role="status">Connecting to student screen...</p>
+        </div>
+      </aside>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      if (localStorage.getItem('crossfit_box_logged_in') !== 'true') {
+        window.location.href = 'signin.html';
+      }
+
+      const startWorkoutButton = document.getElementById('start-workout');
+      const advanceWorkoutButton = document.getElementById('advance-workout');
+      const finishWorkoutButton = document.getElementById('finish-workout');
+      const resetWorkoutButton = document.getElementById('reset-workout');
+      const countdownDisplay = document.getElementById('countdown-display');
+      const statusLabel = document.getElementById('status-label');
+      const currentExerciseName = document.getElementById('current-exercise-name');
+      const syncMessage = document.getElementById('sync-message');
+      const timeCapField = document.getElementById('time-cap-field');
+      const timeCapInput = document.getElementById('time-cap-minutes');
+      const emomControls = document.getElementById('emom-controls');
+      const formatDescription = document.getElementById('format-description');
+      const timerModeInputs = Array.from(document.querySelectorAll('input[name="timer-mode"]'));
+
+      let countdownTimer = null;
+
+      const FORMAT_DESCRIPTIONS = {
+        'for-time': 'Complete the selected routine as quickly as possible. The clock counts up to the cap; the coach can finish early.',
+        amrap: 'Complete as many rounds of the selected routine as possible before the countdown reaches zero.',
+        emom: 'Exercises run in order; choose whether to advance automatically or manually.'
+      };
+
+      function getSelectedExercises() {
+        const cards = Array.from(document.querySelectorAll('input[name="exercise"]:checked'));
+        return cards.map((card) => ({
+          name: card.value,
+          duration: Number(card.dataset.duration),
+          focus: card.dataset.focus
+        }));
+      }
+
+      function getSelectedTimerMode() {
+        return document.querySelector('input[name="timer-mode"]:checked').value;
+      }
+
+      function updateFormatOptions() {
+        const timerMode = getSelectedTimerMode();
+        const usesTimeCap = timerMode === 'for-time' || timerMode === 'amrap';
+        timeCapField.classList.toggle('hidden', !usesTimeCap);
+        emomControls.classList.toggle('hidden', timerMode !== 'emom');
+        formatDescription.textContent = FORMAT_DESCRIPTIONS[timerMode];
+      }
+
+      function renderTeacherStatus() {
+        const workout = getWorkoutState();
+
+        if (!workout || !workout.isActive) {
+          if (workout && workout.isFinished) {
+            statusLabel.textContent = 'Session complete';
+            currentExerciseName.textContent = workout.timerMode === 'for-time' && workout.elapsedSeconds < workout.timeCapSeconds
+              ? `Finished early • ${workout.exercises.length} exercises`
+              : workout.timerMode === 'emom' ? 'All exercises complete' : 'Workout time complete';
+            countdownDisplay.textContent = workout.timerMode === 'for-time'
+              ? formatSeconds(workout.elapsedSeconds)
+              : '00:00';
+          } else {
+            statusLabel.textContent = 'Waiting to start';
+            currentExerciseName.textContent = 'No exercise selected';
+            countdownDisplay.textContent = '00:00';
+          }
+          startWorkoutButton.disabled = false;
+          advanceWorkoutButton.classList.add('hidden');
+          finishWorkoutButton.classList.add('hidden');
+          return;
+        }
+
+        startWorkoutButton.disabled = true;
+        const isEmom = workout.timerMode === 'emom';
+        const isManualPause = isEmom && workout.controlMode === 'manual' && !workout.isStarted;
+        advanceWorkoutButton.classList.toggle('hidden', !isManualPause);
+        finishWorkoutButton.classList.toggle('hidden', workout.timerMode !== 'for-time');
+
+        if (workout.timerMode === 'for-time') {
+          statusLabel.textContent = 'For Time • counting up';
+          currentExerciseName.textContent = `Time cap ${formatSeconds(workout.timeCapSeconds)} • ${workout.exercises.length} exercises`;
+          countdownDisplay.textContent = formatSeconds(workout.elapsedSeconds);
+        } else if (workout.timerMode === 'amrap') {
+          statusLabel.textContent = 'AMRAP • counting down';
+          currentExerciseName.textContent = `${workout.exercises.length} exercises • repeat the routine`;
+          countdownDisplay.textContent = formatSeconds(workout.remainingSeconds);
+        } else {
+          const currentExercise = workout.exercises[workout.currentIndex];
+          statusLabel.textContent = `EMOM • ${workout.controlMode === 'automatic' ? 'Automatic' : 'Manual'}`;
+          currentExerciseName.textContent = currentExercise
+            ? `${currentExercise.name} • ${currentExercise.focus}`
+            : 'No exercise selected';
+          countdownDisplay.textContent = formatSeconds(workout.currentRemaining);
+        }
+      }
+
+      function stopCountdown() {
+        if (countdownTimer) {
+          clearInterval(countdownTimer);
+          countdownTimer = null;
+        }
+      }
+
+      function updateWorkoutState(nextWorkout) {
+        saveWorkoutState(nextWorkout);
+        renderTeacherStatus();
+      }
+
+      function startCountdown() {
+        stopCountdown();
+
+        countdownTimer = setInterval(function () {
+          const workout = getWorkoutState();
+
+          if (!workout || !workout.isActive || !workout.isStarted) {
+            return;
+          }
+
+          if (workout.timerMode === 'for-time') {
+            workout.elapsedSeconds += 1;
+            if (workout.elapsedSeconds >= workout.timeCapSeconds) {
+              workout.elapsedSeconds = workout.timeCapSeconds;
+              finishSession(workout);
+              return;
+            }
+            saveWorkoutState(workout);
+            renderTeacherStatus();
+            return;
+          }
+
+          if (workout.timerMode === 'amrap') {
+            workout.remainingSeconds = Math.max(0, workout.remainingSeconds - 1);
+            if (workout.remainingSeconds === 0) {
+              finishSession(workout);
+              return;
+            }
+            saveWorkoutState(workout);
+            renderTeacherStatus();
+            return;
+          }
+
+          if (workout.currentRemaining > 0) {
+            workout.currentRemaining -= 1;
+            saveWorkoutState(workout);
+            renderTeacherStatus();
+            return;
+          }
+
+          if (workout.controlMode === 'automatic') {
+            if (workout.currentIndex < workout.exercises.length - 1) {
+              workout.currentIndex += 1;
+              workout.currentRemaining = workout.exercises[workout.currentIndex].duration;
+              saveWorkoutState(workout);
+              renderTeacherStatus();
+              return;
+            }
+
+            finishSession(workout);
+            return;
+          }
+
+          if (workout.controlMode === 'manual') {
+            workout.isStarted = false;
+            workout.currentRemaining = 0;
+            saveWorkoutState(workout);
+            advanceWorkoutButton.classList.remove('hidden');
+            renderTeacherStatus();
+            stopCountdown();
+          }
+        }, 1000);
+      }
+
+      function finishSession(workout) {
+        workout.isActive = false;
+        workout.isFinished = true;
+        workout.isStarted = false;
+        saveWorkoutState(workout);
+        renderTeacherStatus();
+        stopCountdown();
+      }
+
+      function beginWorkout() {
+        const selected = getSelectedExercises();
+        if (!selected.length) {
+          statusLabel.textContent = 'Select at least one exercise';
+          return;
+        }
+
+        const timerMode = getSelectedTimerMode();
+        const controlMode = document.querySelector('input[name="mode"]:checked').value;
+        const timeCapSeconds = Number(timeCapInput.value) * 60;
+        if (timerMode !== 'emom' && (!Number.isInteger(timeCapSeconds) || timeCapSeconds < 60 || timeCapSeconds > 7200)) {
+          statusLabel.textContent = 'Set a time cap between 1 and 120 minutes';
+          timeCapInput.focus();
+          return;
+        }
+
+        const workout = {
+          isActive: true,
+          isFinished: false,
+          timerMode,
+          controlMode,
+          exercises: selected,
+          currentIndex: 0,
+          currentRemaining: selected[0].duration,
+          isStarted: true,
+          timeCapSeconds: timerMode === 'emom' ? null : timeCapSeconds,
+          elapsedSeconds: 0,
+          remainingSeconds: timerMode === 'amrap' ? timeCapSeconds : null
+        };
+
+        updateWorkoutState(workout);
+        startCountdown();
+      }
+
+      function advanceToNextExercise() {
+        const workout = getWorkoutState();
+        if (!workout || !workout.isActive) {
+          return;
+        }
+
+        if (workout.timerMode === 'emom' && workout.controlMode === 'manual') {
+          if (!workout.isStarted && workout.currentRemaining === 0) {
+            if (workout.currentIndex < workout.exercises.length - 1) {
+              workout.currentIndex += 1;
+              workout.currentRemaining = workout.exercises[workout.currentIndex].duration;
+              workout.isStarted = true;
+              saveWorkoutState(workout);
+              renderTeacherStatus();
+              advanceWorkoutButton.classList.add('hidden');
+              startCountdown();
+            } else {
+              finishSession(workout);
+            }
+          }
+        }
+      }
+
+      function finishForTimeWorkout() {
+        const workout = getWorkoutState();
+        if (workout && workout.isActive && workout.timerMode === 'for-time') {
+          finishSession(workout);
+        }
+      }
+
+      function resetWorkout() {
+        stopCountdown();
+        clearWorkoutState();
+        renderTeacherStatus();
+      }
+
+      startWorkoutButton.addEventListener('click', beginWorkout);
+      advanceWorkoutButton.addEventListener('click', advanceToNextExercise);
+      finishWorkoutButton.addEventListener('click', finishForTimeWorkout);
+      resetWorkoutButton.addEventListener('click', resetWorkout);
+      timerModeInputs.forEach(function (input) {
+        input.addEventListener('change', updateFormatOptions);
+      });
+      window.addEventListener('workout-sync-success', function () {
+        syncMessage.textContent = 'Connected to student screen';
+        syncMessage.classList.remove('sync-error');
+      });
+      window.addEventListener('workout-sync-error', function (event) {
+        syncMessage.textContent = `Unable to sync with student screen: ${event.detail.message}`;
+        syncMessage.classList.add('sync-error');
+      });
+
+      renderTeacherStatus();
+      updateFormatOptions();
+      fetchSharedWorkoutState().then(function (workout) {
+        cacheWorkoutState(workout);
+        renderTeacherStatus();
+        syncMessage.textContent = 'Connected to student screen';
+      }).catch(function (error) {
+        syncMessage.textContent = `Unable to connect to student screen: ${error.message}`;
+        syncMessage.classList.add('sync-error');
+      });
+    </script>
+  </body>
+</html>

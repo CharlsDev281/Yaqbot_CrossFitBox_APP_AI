@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Practitioner Screen</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page-student">
+    <header class="student-topbar">
+      <div class="brand-wrap">
+        <span class="brand-mark">CF</span>
+        <span class="brand-name">Box Session</span>
+      </div>
+      <a class="text-link light" href="index.html">Home</a>
+    </header>
+
+    <main class="student-shell">
+      <p id="connection-message" class="connection-message" role="status">Connecting to coach...</p>
+      <section id="waiting-state" class="student-card waiting-state">
+        <p class="eyebrow">Coach board</p>
+        <h1>waiting for the teachers instructions</h1>
+      </section>
+
+      <section id="active-state" class="student-card active-state hidden">
+        <p id="workout-mode-label" class="eyebrow">Current exercise</p>
+        <h1 id="exercise-name">Burpees</h1>
+        <div class="timer-ring">
+          <span id="timer-value">00:00</span>
+        </div>
+        <p id="exercise-detail" class="exercise-detail">Ready</p>
+        <ol id="routine-list" class="student-routine hidden"></ol>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      const waitingState = document.getElementById('waiting-state');
+      const activeState = document.getElementById('active-state');
+      const exerciseName = document.getElementById('exercise-name');
+      const timerValue = document.getElementById('timer-value');
+      const exerciseDetail = document.getElementById('exercise-detail');
+      const workoutModeLabel = document.getElementById('workout-mode-label');
+      const routineList = document.getElementById('routine-list');
+      const connectionMessage = document.getElementById('connection-message');
+      let isRefreshing = false;
+
+      async function renderStudentWorkout() {
+        if (isRefreshing) {
+          return;
+        }
+        isRefreshing = true;
+
+        try {
+          const workout = await fetchSharedWorkoutState();
+          cacheWorkoutState(workout);
+          connectionMessage.textContent = 'Connected to coach';
+          connectionMessage.classList.remove('sync-error');
+
+          if (workout && workout.isFinished) {
+            waitingState.classList.add('hidden');
+            activeState.classList.remove('hidden');
+            workoutModeLabel.textContent = workout.timerMode === 'for-time' ? 'For Time complete' : `${workout.timerMode.toUpperCase()} complete`;
+            exerciseName.textContent = workout.timerMode === 'for-time' && workout.elapsedSeconds < workout.timeCapSeconds
+              ? 'Workout finished'
+              : 'Workout complete';
+            timerValue.textContent = workout.timerMode === 'for-time'
+              ? formatSeconds(workout.elapsedSeconds)
+              : '00:00';
+            exerciseDetail.textContent = 'Great effort. Good job!';
+            routineList.classList.add('hidden');
+            return;
+          }
+
+          if (!workout || !workout.isActive) {
+            waitingState.classList.remove('hidden');
+            activeState.classList.add('hidden');
+            return;
+          }
+
+          if (workout.timerMode === 'for-time' || workout.timerMode === 'amrap') {
+            workoutModeLabel.textContent = workout.timerMode === 'for-time' ? 'For Time • counting up' : 'AMRAP • counting down';
+            exerciseName.textContent = workout.timerMode === 'for-time' ? 'Complete the routine' : 'Repeat the routine';
+            timerValue.textContent = formatSeconds(
+              workout.timerMode === 'for-time' ? workout.elapsedSeconds : workout.remainingSeconds
+            );
+            exerciseDetail.textContent = workout.timerMode === 'for-time'
+              ? `Time cap ${formatSeconds(workout.timeCapSeconds)} • finish early when complete`
+              : 'As many rounds as possible before time runs out';
+            routineList.replaceChildren(...workout.exercises.map((exercise) => {
+              const item = document.createElement('li');
+              item.textContent = exercise.name;
+              return item;
+            }));
+            routineList.classList.remove('hidden');
+            waitingState.classList.add('hidden');
+            activeState.classList.remove('hidden');
+            return;
+          }
+
+          const currentExercise = workout.exercises[workout.currentIndex];
+          workoutModeLabel.textContent = `EMOM • ${workout.controlMode === 'automatic' ? 'Automatic' : 'Manual'}`;
+          routineList.classList.add('hidden');
+          waitingState.classList.add('hidden');
+          activeState.classList.remove('hidden');
+
+          exerciseName.textContent = currentExercise.name;
+          timerValue.textContent = formatSeconds(workout.currentRemaining);
+          exerciseDetail.textContent = `${workout.controlMode === 'automatic' ? 'Automatic mode' : 'Manual mode'} • ${currentExercise.focus}`;
+        } catch (error) {
+          connectionMessage.textContent = `Can't reach the coach screen. Retrying... (${error.message})`;
+          connectionMessage.classList.add('sync-error');
+        } finally {
+          isRefreshing = false;
+        }
+      }
+
+      renderStudentWorkout();
+      setInterval(renderStudentWorkout, 500);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Coach Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="page-signin">
+    <main class="auth-shell">
+      <div class="auth-card">
+        <p class="eyebrow centered">CrossFit Box</p>
+        <h1>Coach access</h1>
+        <form id="signin-form" class="auth-form">
+          <label for="user">User</label>
+          <input id="user" name="user" type="email" placeholder="name@yaqbot.com" required />
+
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" placeholder="Enter your password" required />
+
+          <button class="btn btn-primary full-width" type="submit">Sign in</button>
+          <p id="signin-message" class="status-message" aria-live="polite"></p>
+        </form>
+        <a class="text-link" href="index.html">Back to home</a>
+      </div>
+    </main>
+
+    <script src="app.js"></script>
+    <script>
+      const credentials = ensureCredentials();
+      const form = document.getElementById('signin-form');
+      const message = document.getElementById('signin-message');
+      const userInput = document.getElementById('user');
+      const passwordInput = document.getElementById('password');
+
+      form.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+        const enteredUser = userInput.value.trim();
+        const enteredPassword = passwordInput.value.trim();
+
+        if (isValidTeacherEmail(enteredUser) && enteredPassword === credentials.password) {
+          localStorage.setItem('crossfit_box_logged_in', 'true');
+          window.location.href = 'teacher.html';
+          return;
+        }
+
+        message.textContent = 'Incorrect user or password. Please try again.';
+        form.reset();
+        userInput.focus();
+      });
+    </script>
+  </body>
+</html>
