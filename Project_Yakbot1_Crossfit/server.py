@@ -1,4 +1,5 @@
 import json
+import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from threading import Lock
@@ -6,6 +7,7 @@ from threading import Lock
 
 WORKSPACE = Path(__file__).resolve().parent
 MAX_REQUEST_SIZE = 64 * 1024
+ALLOWED_ORIGIN = os.environ.get("ALLOWED_ORIGIN", "https://charlsdev281.github.io").rstrip("/")
 workout_state = None
 workout_lock = Lock()
 
@@ -68,6 +70,15 @@ class CrossFitRequestHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(WORKSPACE), **kwargs)
 
+    def end_headers(self):
+        origin = self.headers.get("Origin")
+        if origin == ALLOWED_ORIGIN:
+            self.send_header("Access-Control-Allow-Origin", origin)
+            self.send_header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Vary", "Origin")
+        super().end_headers()
+
     def do_GET(self):
         if self.path != "/api/workout":
             super().do_GET()
@@ -76,6 +87,15 @@ class CrossFitRequestHandler(SimpleHTTPRequestHandler):
         with workout_lock:
             current_workout = workout_state
         self._send_json({"workout": current_workout})
+
+    def do_OPTIONS(self):
+        if self.path != "/api/workout":
+            self.send_error(404, "Not found")
+            return
+
+        self.send_response(204)
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def do_POST(self):
         if self.path != "/api/workout":
@@ -130,6 +150,7 @@ class CrossFitRequestHandler(SimpleHTTPRequestHandler):
 
 
 if __name__ == "__main__":
-    server = ThreadingHTTPServer(("0.0.0.0", 8000), CrossFitRequestHandler)
-    print("CrossFit Box available on port 8000. Press Ctrl+C to stop.")
+    port = int(os.environ.get("PORT", "8000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), CrossFitRequestHandler)
+    print(f"CrossFit Box available on port {port}. Press Ctrl+C to stop.")
     server.serve_forever()
