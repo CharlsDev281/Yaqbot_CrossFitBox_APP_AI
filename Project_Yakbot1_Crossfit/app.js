@@ -9,6 +9,19 @@ const DEFAULT_CREDENTIALS = {
   password: 'cookiesGalletaDelicious34'
 };
 
+function getWorkoutApiUrl() {
+  const apiBaseUrl = (window.CROSSFIT_API_URL || '').trim().replace(/\/+$/, '');
+  if (apiBaseUrl) {
+    return `${apiBaseUrl}/api/workout`;
+  }
+
+  if (window.location.hostname.endsWith('github.io')) {
+    throw new Error('Shared API is not configured. Set CROSSFIT_API_URL in config.js to your Render service URL.');
+  }
+
+  return '/api/workout';
+}
+
 function ensureCredentials() {
   const saved = localStorage.getItem(STORAGE_KEYS.credentials);
 
@@ -37,10 +50,12 @@ function isValidTeacherEmail(email) {
 
 function saveWorkoutState(workout) {
   localStorage.setItem(STORAGE_KEYS.workout, JSON.stringify(workout));
-  return fetch('/api/workout', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(workout)
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workout)
+    });
   }).then(function (response) {
     if (!response.ok) {
       throw new Error(`Workout sync failed (HTTP ${response.status})`);
@@ -53,7 +68,9 @@ function saveWorkoutState(workout) {
 
 function clearWorkoutState() {
   localStorage.removeItem(STORAGE_KEYS.workout);
-  return fetch('/api/workout', { method: 'DELETE' }).then(function (response) {
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), { method: 'DELETE' });
+  }).then(function (response) {
     if (!response.ok) {
       throw new Error(`Workout reset failed (HTTP ${response.status})`);
     }
@@ -64,7 +81,9 @@ function clearWorkoutState() {
 }
 
 function fetchSharedWorkoutState() {
-  return fetch('/api/workout', { cache: 'no-store' }).then(function (response) {
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), { cache: 'no-store' });
+  }).then(function (response) {
     if (!response.ok) {
       throw new Error(`Workout sync failed (HTTP ${response.status})`);
     }
