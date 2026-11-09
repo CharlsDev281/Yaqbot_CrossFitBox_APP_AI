@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: yaqbot-crossfit-api
+    runtime: python
+    plan: free
+    rootDir: Project_Yakbot1_Crossfit
+    buildCommand: echo "No dependencies to install"
+    startCommand: python server.py
+    envVars:
+      - key: ALLOWED_ORIGIN
+        value: https://charlsdev281.github.io
