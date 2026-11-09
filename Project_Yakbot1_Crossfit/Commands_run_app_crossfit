@@ -5,8 +5,8 @@ python server.py
 2.- On Computer
 http://localhost:8000
 
-user: claudio@sportBoxing.com
+user: <sth>@yaqbot.com
 password:cookiesGalletaDelicious34 
 
 3.- On Mobile Phone
-http://192.168.1.89:8000
+http://<teacher_ip>:8000
