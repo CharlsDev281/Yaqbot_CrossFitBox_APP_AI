@@ -1,125 +1,122 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Practitioner Screen</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body class="page-student">
-    <header class="student-topbar">
-      <div class="brand-wrap">
-        <span class="brand-mark">CF</span>
-        <span class="brand-name">Box Session</span>
-      </div>
-      <a class="text-link light" href="index.html">Home</a>
-    </header>
+const STORAGE_KEYS = {
+  credentials: 'crossfit_box_credentials',
+  workout: 'crossfit_box_workout',
+  loggedIn: 'crossfit_box_logged_in'
+};
 
-    <main class="student-shell">
-      <p id="connection-message" class="connection-message" role="status">Connecting to coach...</p>
-      <section id="waiting-state" class="student-card waiting-state">
-        <p class="eyebrow">Coach board</p>
-        <h1>waiting for the teachers instructions</h1>
-      </section>
+const DEFAULT_CREDENTIALS = {
+  userDomain: '@yaqbot.com',
+  password: 'cookiesGalletaDelicious34'
+};
 
-      <section id="active-state" class="student-card active-state hidden">
-        <p id="workout-mode-label" class="eyebrow">Current exercise</p>
-        <h1 id="exercise-name">Burpees</h1>
-        <div class="timer-ring">
-          <span id="timer-value">00:00</span>
-        </div>
-        <p id="exercise-detail" class="exercise-detail">Ready</p>
-        <ol id="routine-list" class="student-routine hidden"></ol>
-      </section>
-    </main>
+function getWorkoutApiUrl() {
+  const apiBaseUrl = (window.CROSSFIT_API_URL || '').trim().replace(/\/+$/, '');
+  if (apiBaseUrl) {
+    return `${apiBaseUrl}/api/workout`;
+  }
 
-    <script src="app.js"></script>
-    <script>
-      const waitingState = document.getElementById('waiting-state');
-      const activeState = document.getElementById('active-state');
-      const exerciseName = document.getElementById('exercise-name');
-      const timerValue = document.getElementById('timer-value');
-      const exerciseDetail = document.getElementById('exercise-detail');
-      const workoutModeLabel = document.getElementById('workout-mode-label');
-      const routineList = document.getElementById('routine-list');
-      const connectionMessage = document.getElementById('connection-message');
-      let isRefreshing = false;
+  if (window.location.hostname.endsWith('github.io')) {
+    throw new Error('Shared API is not configured. Set CROSSFIT_API_URL in config.js to your Render service URL.');
+  }
 
-      async function renderStudentWorkout() {
-        if (isRefreshing) {
-          return;
-        }
-        isRefreshing = true;
+  return '/api/workout';
+}
 
-        try {
-          const workout = await fetchSharedWorkoutState();
-          cacheWorkoutState(workout);
-          connectionMessage.textContent = 'Connected to coach';
-          connectionMessage.classList.remove('sync-error');
+function ensureCredentials() {
+  const saved = localStorage.getItem(STORAGE_KEYS.credentials);
 
-          if (workout && workout.isFinished) {
-            waitingState.classList.add('hidden');
-            activeState.classList.remove('hidden');
-            workoutModeLabel.textContent = workout.timerMode === 'for-time' ? 'For Time complete' : `${workout.timerMode.toUpperCase()} complete`;
-            exerciseName.textContent = workout.timerMode === 'for-time' && workout.elapsedSeconds < workout.timeCapSeconds
-              ? 'Workout finished'
-              : 'Workout complete';
-            timerValue.textContent = workout.timerMode === 'for-time'
-              ? formatSeconds(workout.elapsedSeconds)
-              : '00:00';
-            exerciseDetail.textContent = 'Great effort. Good job!';
-            routineList.classList.add('hidden');
-            return;
-          }
+  if (!saved) {
+    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify(DEFAULT_CREDENTIALS));
+    return DEFAULT_CREDENTIALS;
+  }
 
-          if (!workout || !workout.isActive) {
-            waitingState.classList.remove('hidden');
-            activeState.classList.add('hidden');
-            return;
-          }
+  try {
+    const parsed = JSON.parse(saved);
+    const credentials = {
+      userDomain: DEFAULT_CREDENTIALS.userDomain,
+      password: parsed.password || DEFAULT_CREDENTIALS.password
+    };
+    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify(credentials));
+    return credentials;
+  } catch (error) {
+    localStorage.setItem(STORAGE_KEYS.credentials, JSON.stringify(DEFAULT_CREDENTIALS));
+    return DEFAULT_CREDENTIALS;
+  }
+}
 
-          if (workout.timerMode === 'for-time' || workout.timerMode === 'amrap') {
-            workoutModeLabel.textContent = workout.timerMode === 'for-time' ? 'For Time • counting up' : 'AMRAP • counting down';
-            exerciseName.textContent = workout.timerMode === 'for-time' ? 'Complete the routine' : 'Repeat the routine';
-            timerValue.textContent = formatSeconds(
-              workout.timerMode === 'for-time' ? workout.elapsedSeconds : workout.remainingSeconds
-            );
-            exerciseDetail.textContent = workout.timerMode === 'for-time'
-              ? `Time cap ${formatSeconds(workout.timeCapSeconds)} • finish early when complete`
-              : 'As many rounds as possible before time runs out';
-            routineList.replaceChildren(...workout.exercises.map((exercise) => {
-              const item = document.createElement('li');
-              item.textContent = exercise.name;
-              return item;
-            }));
-            routineList.classList.remove('hidden');
-            waitingState.classList.add('hidden');
-            activeState.classList.remove('hidden');
-            return;
-          }
+function isValidTeacherEmail(email) {
+  return /^[^\s@]+@yaqbot\.com$/i.test(email);
+}
 
-          const currentExercise = workout.exercises[workout.currentIndex];
-          workoutModeLabel.textContent = `EMOM • ${workout.controlMode === 'automatic' ? 'Automatic' : 'Manual'}`;
-          routineList.classList.add('hidden');
-          waitingState.classList.add('hidden');
-          activeState.classList.remove('hidden');
+function saveWorkoutState(workout) {
+  localStorage.setItem(STORAGE_KEYS.workout, JSON.stringify(workout));
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workout)
+    });
+  }).then(function (response) {
+    if (!response.ok) {
+      throw new Error(`Workout sync failed (HTTP ${response.status})`);
+    }
+    window.dispatchEvent(new Event('workout-sync-success'));
+  }).catch(function (error) {
+    window.dispatchEvent(new CustomEvent('workout-sync-error', { detail: error }));
+  });
+}
 
-          exerciseName.textContent = currentExercise.name;
-          timerValue.textContent = formatSeconds(workout.currentRemaining);
-          exerciseDetail.textContent = `${workout.controlMode === 'automatic' ? 'Automatic mode' : 'Manual mode'} • ${currentExercise.focus}`;
-        } catch (error) {
-          connectionMessage.textContent = `Can't reach the coach screen. Retrying... (${error.message})`;
-          connectionMessage.classList.add('sync-error');
-        } finally {
-          isRefreshing = false;
-        }
-      }
+function clearWorkoutState() {
+  localStorage.removeItem(STORAGE_KEYS.workout);
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), { method: 'DELETE' });
+  }).then(function (response) {
+    if (!response.ok) {
+      throw new Error(`Workout reset failed (HTTP ${response.status})`);
+    }
+    window.dispatchEvent(new Event('workout-sync-success'));
+  }).catch(function (error) {
+    window.dispatchEvent(new CustomEvent('workout-sync-error', { detail: error }));
+  });
+}
 
-      renderStudentWorkout();
-      setInterval(renderStudentWorkout, 500);
-    </script>
-  </body>
-</html>
+function fetchSharedWorkoutState() {
+  return Promise.resolve().then(function () {
+    return fetch(getWorkoutApiUrl(), { cache: 'no-store' });
+  }).then(function (response) {
+    if (!response.ok) {
+      throw new Error(`Workout sync failed (HTTP ${response.status})`);
+    }
+    return response.json().then(function (data) {
+      return data.workout;
+    });
+  });
+}
+
+function cacheWorkoutState(workout) {
+  if (workout === null) {
+    localStorage.removeItem(STORAGE_KEYS.workout);
+    return;
+  }
+  localStorage.setItem(STORAGE_KEYS.workout, JSON.stringify(workout));
+}
+
+function getWorkoutState() {
+  const raw = localStorage.getItem(STORAGE_KEYS.workout);
+  if (!raw) {
+    return null;
+  }
+
+  try {
+    return JSON.parse(raw);
+  } catch (error) {
+    return null;
+  }
+}
+
+function formatSeconds(totalSeconds) {
+  const safeSeconds = Math.max(0, Number(totalSeconds) || 0);
+  const minutes = Math.floor(safeSeconds / 60);
+  const seconds = safeSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
